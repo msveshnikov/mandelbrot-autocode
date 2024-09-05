@@ -1,4 +1,4 @@
-# Mandelbrot Visualization Site (built by [AutoCode](https://autocode.work) in 1 minutes)
+# Mandelbrot Visualization Site (built by [AutoCode](https://autocode.work) in 1 minute)
 
 ![alt text](image.png)
 
