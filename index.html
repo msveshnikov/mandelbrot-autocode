@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Mandelbrot Visualization</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+            }
+            header {
+                background-color: #333;
+                color: white;
+                padding: 1rem;
+                text-align: center;
+            }
+            main {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 1rem;
+            }
+            #mandelbrot-canvas {
+                border: 1px solid #ccc;
+                margin-bottom: 1rem;
+            }
+            #controls {
+                display: flex;
+                gap: 1rem;
+                margin-bottom: 1rem;
+            }
+            footer {
+                background-color: #333;
+                color: white;
+                text-align: center;
+                padding: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Mandelbrot Visualization</h1>
+        </header>
+        <main>
+            <canvas id="mandelbrot-canvas" width="800" height="600"></canvas>
+            <div id="controls">
+                <button id="zoom-in">Zoom In</button>
+                <button id="zoom-out">Zoom Out</button>
+                <button id="reset">Reset</button>
+                <select id="color-scheme">
+                    <option value="default">Default</option>
+                    <option value="grayscale">Grayscale</option>
+                    <option value="rainbow">Rainbow</option>
+                </select>
+                <button id="save">Save View</button>
+                <button id="share">Share</button>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; 2023 Mandelbrot Visualization. Licensed under MIT License.</p>
+        </footer>
+        <script>
+            const canvas = document.getElementById("mandelbrot-canvas");
+            const ctx = canvas.getContext("2d");
+            let centerX = -0.5;
+            let centerY = 0;
+            let zoom = 1;
+
+            function drawMandelbrot() {
+                const width = canvas.width;
+                const height = canvas.height;
+                const imageData = ctx.createImageData(width, height);
+
+                for (let x = 0; x < width; x++) {
+                    for (let y = 0; y < height; y++) {
+                        const zx = (x - width / 2) / (0.5 * zoom * width) + centerX;
+                        const zy = (y - height / 2) / (0.5 * zoom * height) + centerY;
+                        let cx = zx;
+                        let cy = zy;
+
+                        let iteration = 0;
+                        const maxIteration = 1000;
+
+                        while (cx * cx + cy * cy < 4 && iteration < maxIteration) {
+                            const xtemp = cx * cx - cy * cy + zx;
+                            cy = 2 * cx * cy + zy;
+                            cx = xtemp;
+                            iteration++;
+                        }
+
+                        const color =
+                            iteration === maxIteration
+                                ? [0, 0, 0]
+                                : [iteration % 256, (iteration * 7) % 256, (iteration * 13) % 256];
+
+                        const pixelIndex = (y * width + x) * 4;
+                        imageData.data[pixelIndex] = color[0];
+                        imageData.data[pixelIndex + 1] = color[1];
+                        imageData.data[pixelIndex + 2] = color[2];
+                        imageData.data[pixelIndex + 3] = 255;
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            document.getElementById("zoom-in").addEventListener("click", () => {
+                zoom *= 2;
+                drawMandelbrot();
+            });
+
+            document.getElementById("zoom-out").addEventListener("click", () => {
+                zoom /= 2;
+                drawMandelbrot();
+            });
+
+            document.getElementById("reset").addEventListener("click", () => {
+                centerX = -0.5;
+                centerY = 0;
+                zoom = 1;
+                drawMandelbrot();
+            });
+
+            document.getElementById("color-scheme").addEventListener("change", (e) => {
+                // Implement color scheme change logic here
+                drawMandelbrot();
+            });
+
+            document.getElementById("save").addEventListener("click", () => {
+                const link = document.createElement("a");
+                link.download = "mandelbrot.png";
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+
+            document.getElementById("share").addEventListener("click", () => {
+                const url = new URL(window.location);
+                url.searchParams.set("x", centerX);
+                url.searchParams.set("y", centerY);
+                url.searchParams.set("zoom", zoom);
+                navigator.clipboard.writeText(url.toString());
+                alert("Link copied to clipboard!");
+            });
+
+            canvas.addEventListener("click", (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                centerX += (x - canvas.width / 2) / (0.5 * zoom * canvas.width);
+                centerY += (y - canvas.height / 2) / (0.5 * zoom * canvas.height);
+                zoom *= 2;
+                drawMandelbrot();
+            });
+
+            drawMandelbrot();
+        </script>
+    </body>
+</html>
