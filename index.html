@@ -1,164 +1,329 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Mandelbrot Visualization</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 0;
-                padding: 0;
-                display: flex;
-                flex-direction: column;
-                min-height: 100vh;
-            }
-            header {
-                background-color: #333;
-                color: white;
-                padding: 1rem;
-                text-align: center;
-            }
-            main {
-                flex-grow: 1;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 1rem;
-            }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbrot Visualization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+        }
+        #mandelbrot-canvas {
+            border: 1px solid #ccc;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        #controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button, select {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover, select:hover {
+            background-color: #45a049;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+        }
+        #tutorial {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            max-width: 600px;
+        }
+        #history {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            max-width: 600px;
+        }
+        @media (max-width: 600px) {
             #mandelbrot-canvas {
-                border: 1px solid #ccc;
-                margin-bottom: 1rem;
+                width: 100%;
+                height: auto;
             }
-            #controls {
-                display: flex;
-                gap: 1rem;
-                margin-bottom: 1rem;
-            }
-            footer {
-                background-color: #333;
-                color: white;
-                text-align: center;
-                padding: 1rem;
-            }
-        </style>
-    </head>
-    <body>
-        <header>
-            <h1>Mandelbrot Visualization</h1>
-        </header>
-        <main>
-            <canvas id="mandelbrot-canvas" width="800" height="600"></canvas>
-            <div id="controls">
-                <button id="zoom-in">Zoom In</button>
-                <button id="zoom-out">Zoom Out</button>
-                <button id="reset">Reset</button>
-                <select id="color-scheme">
-                    <option value="default">Default</option>
-                    <option value="grayscale">Grayscale</option>
-                    <option value="rainbow">Rainbow</option>
-                </select>
-                <button id="save">Save View</button>
-                <button id="share">Share</button>
-            </div>
-        </main>
-        <footer>
-            <p>&copy; 2023 Mandelbrot Visualization. Licensed under MIT License.</p>
-        </footer>
-        <script>
-            const canvas = document.getElementById("mandelbrot-canvas");
-            const ctx = canvas.getContext("2d");
-            let centerX = -0.5;
-            let centerY = 0;
-            let zoom = 1;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Mandelbrot Visualization</h1>
+    </header>
+    <main>
+        <div id="tutorial">
+            <h2>How to use:</h2>
+            <ol>
+                <li>Click on the canvas to zoom in at a specific point</li>
+                <li>Use the zoom buttons for finer control</li>
+                <li>Change color schemes using the dropdown</li>
+                <li>Save or share your current view</li>
+            </ol>
+        </div>
+        <canvas id="mandelbrot-canvas" width="800" height="600"></canvas>
+        <div id="controls">
+            <button id="zoom-in">Zoom In</button>
+            <button id="zoom-out">Zoom Out</button>
+            <button id="reset">Reset</button>
+            <select id="color-scheme">
+                <option value="default">Default</option>
+                <option value="grayscale">Grayscale</option>
+                <option value="rainbow">Rainbow</option>
+                <option value="fire">Fire</option>
+            </select>
+            <button id="save">Save View</button>
+            <button id="share">Share</button>
+            <button id="auto-zoom">Auto Zoom</button>
+        </div>
+        <div id="history">
+            <h3>Exploration History:</h3>
+            <ul id="history-list"></ul>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 Mandelbrot Visualization. Licensed under MIT License.</p>
+    </footer>
+    <script>
+        const canvas = document.getElementById("mandelbrot-canvas");
+        const ctx = canvas.getContext("2d");
+        let centerX = -0.5;
+        let centerY = 0;
+        let zoom = 1;
+        let colorScheme = "default";
+        let isAutoZooming = false;
 
-            function drawMandelbrot() {
-                const width = canvas.width;
-                const height = canvas.height;
-                const imageData = ctx.createImageData(width, height);
+        function drawMandelbrot() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const imageData = ctx.createImageData(width, height);
 
-                for (let x = 0; x < width; x++) {
-                    for (let y = 0; y < height; y++) {
-                        const zx = (x - width / 2) / (0.5 * zoom * width) + centerX;
-                        const zy = (y - height / 2) / (0.5 * zoom * height) + centerY;
-                        let cx = zx;
-                        let cy = zy;
+            const worker = new Worker(URL.createObjectURL(new Blob([`
+                self.onmessage = function(e) {
+                    const { width, height, centerX, centerY, zoom, colorScheme } = e.data;
+                    const maxIteration = 1000;
+                    const result = new Uint8ClampedArray(width * height * 4);
 
-                        let iteration = 0;
-                        const maxIteration = 1000;
+                    for (let x = 0; x < width; x++) {
+                        for (let y = 0; y < height; y++) {
+                            const zx = (x - width / 2) / (0.5 * zoom * width) + centerX;
+                            const zy = (y - height / 2) / (0.5 * zoom * height) + centerY;
+                            let cx = zx;
+                            let cy = zy;
 
-                        while (cx * cx + cy * cy < 4 && iteration < maxIteration) {
-                            const xtemp = cx * cx - cy * cy + zx;
-                            cy = 2 * cx * cy + zy;
-                            cx = xtemp;
-                            iteration++;
+                            let iteration = 0;
+
+                            while (cx * cx + cy * cy < 4 && iteration < maxIteration) {
+                                const xtemp = cx * cx - cy * cy + zx;
+                                cy = 2 * cx * cy + zy;
+                                cx = xtemp;
+                                iteration++;
+                            }
+
+                            let color;
+                            if (iteration === maxIteration) {
+                                color = [0, 0, 0];
+                            } else {
+                                switch (colorScheme) {
+                                    case "grayscale":
+                                        const gray = Math.floor((iteration / maxIteration) * 255);
+                                        color = [gray, gray, gray];
+                                        break;
+                                    case "rainbow":
+                                        const hue = (iteration / maxIteration) * 360;
+                                        const [r, g, b] = hslToRgb(hue / 360, 1, 0.5);
+                                        color = [r * 255, g * 255, b * 255];
+                                        break;
+                                    case "fire":
+                                        const t = iteration / maxIteration;
+                                        color = [
+                                            Math.floor(255 * t),
+                                            Math.floor(255 * Math.pow(t, 0.7)),
+                                            Math.floor(255 * Math.pow(t, 0.5))
+                                        ];
+                                        break;
+                                    default:
+                                        color = [
+                                            iteration % 256,
+                                            (iteration * 7) % 256,
+                                            (iteration * 13) % 256
+                                        ];
+                                }
+                            }
+
+                            const pixelIndex = (y * width + x) * 4;
+                            result[pixelIndex] = color[0];
+                            result[pixelIndex + 1] = color[1];
+                            result[pixelIndex + 2] = color[2];
+                            result[pixelIndex + 3] = 255;
                         }
-
-                        const color =
-                            iteration === maxIteration
-                                ? [0, 0, 0]
-                                : [iteration % 256, (iteration * 7) % 256, (iteration * 13) % 256];
-
-                        const pixelIndex = (y * width + x) * 4;
-                        imageData.data[pixelIndex] = color[0];
-                        imageData.data[pixelIndex + 1] = color[1];
-                        imageData.data[pixelIndex + 2] = color[2];
-                        imageData.data[pixelIndex + 3] = 255;
                     }
+
+                    self.postMessage(result);
+                };
+
+                function hslToRgb(h, s, l) {
+                    let r, g, b;
+
+                    if (s === 0) {
+                        r = g = b = l;
+                    } else {
+                        const hue2rgb = (p, q, t) => {
+                            if (t < 0) t += 1;
+                            if (t > 1) t -= 1;
+                            if (t < 1/6) return p + (q - p) * 6 * t;
+                            if (t < 1/2) return q;
+                            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                            return p;
+                        };
+
+                        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                        const p = 2 * l - q;
+                        r = hue2rgb(p, q, h + 1/3);
+                        g = hue2rgb(p, q, h);
+                        b = hue2rgb(p, q, h - 1/3);
+                    }
+
+                    return [r, g, b];
                 }
+            `], {type: "application/javascript"})));
 
+            worker.onmessage = function(e) {
+                imageData.data.set(e.data);
                 ctx.putImageData(imageData, 0, 0);
+                worker.terminate();
+            };
+
+            worker.postMessage({ width, height, centerX, centerY, zoom, colorScheme });
+        }
+
+        function addToHistory() {
+            const historyList = document.getElementById("history-list");
+            const listItem = document.createElement("li");
+            listItem.textContent = `Center: (${centerX.toFixed(4)}, ${centerY.toFixed(4)}), Zoom: ${zoom.toFixed(2)}`;
+            historyList.appendChild(listItem);
+            if (historyList.children.length > 5) {
+                historyList.removeChild(historyList.firstChild);
             }
+        }
 
-            document.getElementById("zoom-in").addEventListener("click", () => {
-                zoom *= 2;
-                drawMandelbrot();
-            });
-
-            document.getElementById("zoom-out").addEventListener("click", () => {
-                zoom /= 2;
-                drawMandelbrot();
-            });
-
-            document.getElementById("reset").addEventListener("click", () => {
-                centerX = -0.5;
-                centerY = 0;
-                zoom = 1;
-                drawMandelbrot();
-            });
-
-            document.getElementById("color-scheme").addEventListener("change", (e) => {
-                // Implement color scheme change logic here
-                drawMandelbrot();
-            });
-
-            document.getElementById("save").addEventListener("click", () => {
-                const link = document.createElement("a");
-                link.download = "mandelbrot.png";
-                link.href = canvas.toDataURL();
-                link.click();
-            });
-
-            document.getElementById("share").addEventListener("click", () => {
-                const url = new URL(window.location);
-                url.searchParams.set("x", centerX);
-                url.searchParams.set("y", centerY);
-                url.searchParams.set("zoom", zoom);
-                navigator.clipboard.writeText(url.toString());
-                alert("Link copied to clipboard!");
-            });
-
-            canvas.addEventListener("click", (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                centerX += (x - canvas.width / 2) / (0.5 * zoom * canvas.width);
-                centerY += (y - canvas.height / 2) / (0.5 * zoom * canvas.height);
-                zoom *= 2;
-                drawMandelbrot();
-            });
-
+        document.getElementById("zoom-in").addEventListener("click", () => {
+            zoom *= 2;
             drawMandelbrot();
-        </script>
-    </body>
+            addToHistory();
+        });
+
+        document.getElementById("zoom-out").addEventListener("click", () => {
+            zoom /= 2;
+            drawMandelbrot();
+            addToHistory();
+        });
+
+        document.getElementById("reset").addEventListener("click", () => {
+            centerX = -0.5;
+            centerY = 0;
+            zoom = 1;
+            drawMandelbrot();
+            addToHistory();
+        });
+
+        document.getElementById("color-scheme").addEventListener("change", (e) => {
+            colorScheme = e.target.value;
+            drawMandelbrot();
+        });
+
+        document.getElementById("save").addEventListener("click", () => {
+            const link = document.createElement("a");
+            link.download = "mandelbrot.png";
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        document.getElementById("share").addEventListener("click", () => {
+            const url = new URL(window.location);
+            url.searchParams.set("x", centerX);
+            url.searchParams.set("y", centerY);
+            url.searchParams.set("zoom", zoom);
+            url.searchParams.set("color", colorScheme);
+            navigator.clipboard.writeText(url.toString());
+            alert("Link copied to clipboard!");
+        });
+
+        document.getElementById("auto-zoom").addEventListener("click", () => {
+            isAutoZooming = !isAutoZooming;
+            if (isAutoZooming) {
+                autoZoom();
+            }
+        });
+
+        function autoZoom() {
+            if (!isAutoZooming) return;
+            zoom *= 1.1;
+            drawMandelbrot();
+            addToHistory();
+            requestAnimationFrame(autoZoom);
+        }
+
+        canvas.addEventListener("click", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            centerX += (x - canvas.width / 2) / (0.5 * zoom * canvas.width);
+            centerY += (y - canvas.height / 2) / (0.5 * zoom * canvas.height);
+            zoom *= 2;
+            drawMandelbrot();
+            addToHistory();
+        });
+
+        window.addEventListener("load", () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has("x") && params.has("y") && params.has("zoom")) {
+                centerX = parseFloat(params.get("x"));
+                centerY = parseFloat(params.get("y"));
+                zoom = parseFloat(params.get("zoom"));
+                if (params.has("color")) {
+                    colorScheme = params.get("color");
+                    document.getElementById("color-scheme").value = colorScheme;
+                }
+            }
+            drawMandelbrot();
+            addToHistory();
+        });
+
+        drawMandelbrot();
+    </script>
+</body>
 </html>

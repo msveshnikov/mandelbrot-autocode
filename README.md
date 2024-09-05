@@ -46,3 +46,8 @@ We welcome contributions! Please see our contributing guidelines for more inform
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+# TODO
+
+-   make auto deep to fractal mode (animation)
+-   improve performance
